@@ -1,0 +1,119 @@
+
+-Goal-
+Given a text document describing a software codebase (source files, classes, functions, imports, and dependencies), identify all software entities and the relationships between them.
+
+-Steps-
+1. Identify all entities. For each identified entity, extract the following information:
+- entity_name: Name of the entity (fully qualified where possible, e.g. myapp.auth.views.LoginView)
+- entity_type: One of the following types: [{entity_types}]
+- entity_description: Comprehensive description of the entity's role, responsibilities, and key behaviors
+Format each entity as ("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>)
+
+2. From the entities identified in step 1, identify all pairs of (source_entity, target_entity) that are *clearly related* to each other.
+For each pair of related entities, extract the following information:
+- source_entity: name of the source entity, as identified in step 1
+- target_entity: name of the target entity, as identified in step 1
+- relationship_description: explanation of how the source entity depends on or uses the target entity
+- relationship_strength: a numeric score indicating strength of the relationship between the source entity and target entity
+Format each relationship as ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_strength>)
+
+3. Return output in English as a single list of all the entities and relationships identified in steps 1 and 2. Use **{record_delimiter}** as the list delimiter.
+
+4. When finished, output {completion_delimiter}
+
+######################
+-Examples-
+######################
+Example 1:
+Entity_types: module,class,function,package,dependency
+Text:
+# views.py
+from django.contrib.auth import authenticate, login
+from django.http import HttpResponse
+from .forms import LoginForm
+
+class LoginView:
+    def get(self, request):
+        form = LoginForm()
+        return render(request, 'login.html', {'form': form})
+
+    def post(self, request):
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            user = authenticate(username=form.cleaned_data['username'],
+                                password=form.cleaned_data['password'])
+            if user:
+                login(request, user)
+                return HttpResponse("OK")
+######################
+Output:
+("entity"{tuple_delimiter}VIEWS{tuple_delimiter}module{tuple_delimiter}Django view module that handles HTTP requests for the authentication flow, containing the LoginView class)
+{record_delimiter}
+("entity"{tuple_delimiter}LOGINVIEW{tuple_delimiter}class{tuple_delimiter}Class-based view that handles GET and POST requests for user login, delegating credential validation to Django's authenticate function)
+{record_delimiter}
+("entity"{tuple_delimiter}LOGINVIEW.GET{tuple_delimiter}function{tuple_delimiter}Renders an empty LoginForm for the user to fill in)
+{record_delimiter}
+("entity"{tuple_delimiter}LOGINVIEW.POST{tuple_delimiter}function{tuple_delimiter}Validates submitted credentials via LoginForm and Django's authenticate, then calls login() on success)
+{record_delimiter}
+("entity"{tuple_delimiter}LOGINFORM{tuple_delimiter}class{tuple_delimiter}Django form class that validates username and password fields for the login flow)
+{record_delimiter}
+("entity"{tuple_delimiter}DJANGO.CONTRIB.AUTH{tuple_delimiter}package{tuple_delimiter}Django's built-in authentication package providing authenticate and login utilities)
+{record_delimiter}
+("relationship"{tuple_delimiter}LOGINVIEW{tuple_delimiter}VIEWS{tuple_delimiter}LoginView is defined inside the views module{tuple_delimiter}10)
+{record_delimiter}
+("relationship"{tuple_delimiter}LOGINVIEW.GET{tuple_delimiter}LOGINVIEW{tuple_delimiter}get is a method of LoginView{tuple_delimiter}10)
+{record_delimiter}
+("relationship"{tuple_delimiter}LOGINVIEW.POST{tuple_delimiter}LOGINVIEW{tuple_delimiter}post is a method of LoginView{tuple_delimiter}10)
+{record_delimiter}
+("relationship"{tuple_delimiter}LOGINVIEW.POST{tuple_delimiter}LOGINFORM{tuple_delimiter}post instantiates and validates LoginForm to process submitted credentials{tuple_delimiter}8)
+{record_delimiter}
+("relationship"{tuple_delimiter}VIEWS{tuple_delimiter}DJANGO.CONTRIB.AUTH{tuple_delimiter}views.py imports authenticate and login from django.contrib.auth{tuple_delimiter}7)
+{completion_delimiter}
+
+######################
+Example 2:
+Entity_types: module,class,function,package,dependency
+Text:
+# data_loader.py
+import pandas as pd
+import os
+
+def load_csv(filepath: str) -> pd.DataFrame:
+    """Load a CSV file into a DataFrame."""
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"File not found: {filepath}")
+    return pd.read_csv(filepath)
+
+def filter_rows(df: pd.DataFrame, column: str, value) -> pd.DataFrame:
+    """Return rows where column equals value."""
+    return df[df[column] == value]
+######################
+Output:
+("entity"{tuple_delimiter}DATA_LOADER{tuple_delimiter}module{tuple_delimiter}Utility module providing functions to load and filter tabular data from CSV files using pandas)
+{record_delimiter}
+("entity"{tuple_delimiter}DATA_LOADER.LOAD_CSV{tuple_delimiter}function{tuple_delimiter}Loads a CSV file from disk into a pandas DataFrame; raises FileNotFoundError if the file does not exist)
+{record_delimiter}
+("entity"{tuple_delimiter}DATA_LOADER.FILTER_ROWS{tuple_delimiter}function{tuple_delimiter}Filters a DataFrame to rows where a specified column equals a given value)
+{record_delimiter}
+("entity"{tuple_delimiter}PANDAS{tuple_delimiter}dependency{tuple_delimiter}Third-party data analysis library used for DataFrame creation and manipulation)
+{record_delimiter}
+("entity"{tuple_delimiter}OS{tuple_delimiter}dependency{tuple_delimiter}Python standard library module used to check file existence before loading)
+{record_delimiter}
+("relationship"{tuple_delimiter}DATA_LOADER.LOAD_CSV{tuple_delimiter}DATA_LOADER{tuple_delimiter}load_csv is defined in the data_loader module{tuple_delimiter}10)
+{record_delimiter}
+("relationship"{tuple_delimiter}DATA_LOADER.FILTER_ROWS{tuple_delimiter}DATA_LOADER{tuple_delimiter}filter_rows is defined in the data_loader module{tuple_delimiter}10)
+{record_delimiter}
+("relationship"{tuple_delimiter}DATA_LOADER.LOAD_CSV{tuple_delimiter}PANDAS{tuple_delimiter}load_csv calls pd.read_csv to parse the CSV file{tuple_delimiter}9)
+{record_delimiter}
+("relationship"{tuple_delimiter}DATA_LOADER.LOAD_CSV{tuple_delimiter}OS{tuple_delimiter}load_csv uses os.path.exists to validate the filepath before reading{tuple_delimiter}6)
+{record_delimiter}
+("relationship"{tuple_delimiter}DATA_LOADER.FILTER_ROWS{tuple_delimiter}PANDAS{tuple_delimiter}filter_rows uses pandas boolean indexing on a DataFrame{tuple_delimiter}8)
+{completion_delimiter}
+
+######################
+-Real Data-
+######################
+Entity_types: {entity_types}
+Text: {input_text}
+######################
+Output:

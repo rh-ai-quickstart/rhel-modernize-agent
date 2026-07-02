@@ -84,9 +84,8 @@ embed_text:
   model_id: default_embedding_model
   vector_store_id: default_vector_store
 
-entity_extraction:
-  model_id: default_chat_model
-  prompt: "prompts/entity_extraction.txt"
+extract_graph:
+  prompt: "prompts/extract_graph.txt"
   entity_types: [module, class, function, package, dependency]
   max_gleanings: 1
 
