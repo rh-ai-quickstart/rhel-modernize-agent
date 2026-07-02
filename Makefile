@@ -84,9 +84,12 @@ PVC_NAME            := code-understanding-pipeline-$(RUN_ID)
 INDEXES_DIR         := indexes
 REPO_NAME           := $(basename $(notdir $(GITHUB_TARGET_REPO)))
 INDEX_TAR           ?= $(INDEXES_DIR)/graphrag-index-$(if $(REPO_NAME),$(REPO_NAME)-,)$(RUN_ID).tar.gz
+CHUNK_SIZE          ?=
+CHUNK_OVERLAP       ?=
 QUESTION            ?= Which modules would be riskiest to refactor first? Include the fully qualified names.
 COMMUNITY_LEVEL     ?= 2
-REPORTS_DIR         := reports
+INDEX_BASENAME      := $(basename $(basename $(notdir $(INDEX_TAR))))
+REPORTS_DIR         := reports/$(if $(INDEX_BASENAME),$(INDEX_BASENAME),latest)
 MOUNT_PATH          := /opt/app-root/src
 WORKDIR             := $(MOUNT_PATH)/workflows/code_understanding
 # Image used by the analysis pipeline's git_clone_step — extracted from compiled YAML so REGISTRY
@@ -128,10 +131,13 @@ index-repo: ## Run indexing pipeline: make index-repo NAMESPACE=x GITHUB_TARGET_
 import os, urllib3; urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning); \
 from kfp.client import Client; \
 c = Client(host='$(PIPELINE_SERVER_URL)', existing_token=os.environ['OC_TOKEN'], verify_ssl=False); \
+args = {'pvc_name': '$(PVC_NAME)', 'repo_url': '$(AGENT_MESH_REPO_URL)', \
+        'repo_ref': '$(AGENT_MESH_REPO_REF)', 'git_repo': '$(GITHUB_TARGET_REPO)', \
+        'git_branch': '$(GITHUB_TARGET_BRANCH)'}; \
+$(if $(CHUNK_SIZE),args.update({'chunk_size': $(CHUNK_SIZE)});) \
+$(if $(CHUNK_OVERLAP),args.update({'chunk_overlap': $(CHUNK_OVERLAP)});) \
 run = c.create_run_from_pipeline_package('helm/files/code_understanding_pipeline.yaml', \
-    arguments={'pvc_name': '$(PVC_NAME)', 'repo_url': '$(AGENT_MESH_REPO_URL)', \
-               'repo_ref': '$(AGENT_MESH_REPO_REF)', 'git_repo': '$(GITHUB_TARGET_REPO)', \
-               'git_branch': '$(GITHUB_TARGET_BRANCH)'}); \
+    arguments=args); \
 print(f'Run submitted: {run.run_id}'); \
 result = c.wait_for_run_completion(run.run_id, timeout=7200); \
 print(f'Run completed: {result.state}'); \
