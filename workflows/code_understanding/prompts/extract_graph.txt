@@ -1,4 +1,4 @@
-Reasoning: low
+Reasoning: high
 
 -Goal-
 Given a text document describing a software codebase (source files, classes, functions, imports, and dependencies), identify all software entities and the relationships between them.

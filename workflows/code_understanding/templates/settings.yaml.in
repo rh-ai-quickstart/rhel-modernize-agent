@@ -17,9 +17,11 @@ models:
     async_mode: threaded #asyncio
     retry_strategy: native
     max_retries: 10
-    tokens_per_minute: null           
-    requests_per_minute: null   
-    # encoding_name: o200k_harmony 
+    tokens_per_minute: null
+    requests_per_minute: null
+    # encoding_name: o200k_harmony
+    call_args:
+      reasoning_effort: high
   default_embedding_model:
     type: embedding # or azure_openai_embedding
     api_base: ${EMBED_LLM_API_BASE}
