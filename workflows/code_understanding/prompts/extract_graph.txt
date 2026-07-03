@@ -12,6 +12,7 @@ Format each entity as ("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<e
 
 2. From the entities identified in step 1, identify ALL pairs of (source_entity, target_entity) that are related to each other.
 Be exhaustive: capture every import, every function or method call, every class instantiation, every inheritance, every definition (method defined in class, function defined in module), and every other dependency visible in the text. Include a relationship even when the connection appears obvious. Common relationship types to look for: imports, calls, instantiates, inherits, defines, overrides, configures, uses.
+When multiple source files appear in the text, always extract cross-file relationships: every import from one file to another, every call from a function in one module to an entity defined in another, and every class instantiation or inheritance that crosses file boundaries.
 For each pair of related entities, extract the following information:
 - source_entity: name of the source entity, as identified in step 1
 - target_entity: name of the target entity, as identified in step 1
@@ -116,6 +117,81 @@ Output:
 ("relationship"{tuple_delimiter}DATA_LOADER.LOAD_CSV{tuple_delimiter}OS{tuple_delimiter}load_csv uses os.path.exists to validate the filepath before reading{tuple_delimiter}6)
 {record_delimiter}
 ("relationship"{tuple_delimiter}DATA_LOADER.FILTER_ROWS{tuple_delimiter}PANDAS{tuple_delimiter}filter_rows uses pandas boolean indexing on a DataFrame{tuple_delimiter}8)
+{completion_delimiter}
+
+######################
+Example 3:
+Entity_types: module,class,function,package,dependency
+Text:
+# models.py
+from django.db import models
+
+class Post(models.Model):
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+
+    def get_absolute_url(self):
+        return f"/posts/{self.pk}/"
+
+    def get_summary(self):
+        return self.content[:100]
+
+# views.py
+from django.shortcuts import render, get_object_or_404
+from .models import Post
+
+def post_list(request):
+    posts = Post.objects.all()
+    return render(request, 'post_list.html', {'posts': posts})
+
+def post_detail(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    return render(request, 'post_detail.html', {'post': post, 'summary': post.get_summary()})
+######################
+Output:
+("entity"{tuple_delimiter}MODELS{tuple_delimiter}module{tuple_delimiter}Django models module defining the Post database model and its instance methods)
+{record_delimiter}
+("entity"{tuple_delimiter}MODELS.POST{tuple_delimiter}class{tuple_delimiter}Django ORM model representing a blog post with title and content fields, inheriting from models.Model)
+{record_delimiter}
+("entity"{tuple_delimiter}MODELS.POST.GET_ABSOLUTE_URL{tuple_delimiter}function{tuple_delimiter}Returns the canonical URL path for a Post instance using its primary key)
+{record_delimiter}
+("entity"{tuple_delimiter}MODELS.POST.GET_SUMMARY{tuple_delimiter}function{tuple_delimiter}Returns the first 100 characters of a Post's content field as a short summary)
+{record_delimiter}
+("entity"{tuple_delimiter}VIEWS{tuple_delimiter}module{tuple_delimiter}Django views module providing list and detail views for Post objects)
+{record_delimiter}
+("entity"{tuple_delimiter}VIEWS.POST_LIST{tuple_delimiter}function{tuple_delimiter}Retrieves all Post objects and renders them via the post_list template)
+{record_delimiter}
+("entity"{tuple_delimiter}VIEWS.POST_DETAIL{tuple_delimiter}function{tuple_delimiter}Retrieves a single Post by primary key and renders it with a summary via the post_detail template)
+{record_delimiter}
+("entity"{tuple_delimiter}DJANGO.DB{tuple_delimiter}package{tuple_delimiter}Django's database abstraction package providing the base Model class and ORM field types)
+{record_delimiter}
+("entity"{tuple_delimiter}DJANGO.SHORTCUTS{tuple_delimiter}package{tuple_delimiter}Django helper package providing render and get_object_or_404 utilities)
+{record_delimiter}
+("relationship"{tuple_delimiter}MODELS.POST{tuple_delimiter}MODELS{tuple_delimiter}Post class is defined in the models module{tuple_delimiter}10)
+{record_delimiter}
+("relationship"{tuple_delimiter}MODELS.POST.GET_ABSOLUTE_URL{tuple_delimiter}MODELS.POST{tuple_delimiter}get_absolute_url is a method of the Post class{tuple_delimiter}10)
+{record_delimiter}
+("relationship"{tuple_delimiter}MODELS.POST.GET_SUMMARY{tuple_delimiter}MODELS.POST{tuple_delimiter}get_summary is a method of the Post class{tuple_delimiter}10)
+{record_delimiter}
+("relationship"{tuple_delimiter}MODELS.POST{tuple_delimiter}DJANGO.DB{tuple_delimiter}Post inherits from django.db.models.Model{tuple_delimiter}9)
+{record_delimiter}
+("relationship"{tuple_delimiter}MODELS{tuple_delimiter}DJANGO.DB{tuple_delimiter}models.py imports the models package from django.db{tuple_delimiter}7)
+{record_delimiter}
+("relationship"{tuple_delimiter}VIEWS.POST_LIST{tuple_delimiter}VIEWS{tuple_delimiter}post_list is defined in the views module{tuple_delimiter}10)
+{record_delimiter}
+("relationship"{tuple_delimiter}VIEWS.POST_DETAIL{tuple_delimiter}VIEWS{tuple_delimiter}post_detail is defined in the views module{tuple_delimiter}10)
+{record_delimiter}
+("relationship"{tuple_delimiter}VIEWS{tuple_delimiter}MODELS{tuple_delimiter}views.py imports Post from models.py{tuple_delimiter}8)
+{record_delimiter}
+("relationship"{tuple_delimiter}VIEWS{tuple_delimiter}MODELS.POST{tuple_delimiter}views.py directly imports and uses the Post class{tuple_delimiter}9)
+{record_delimiter}
+("relationship"{tuple_delimiter}VIEWS.POST_LIST{tuple_delimiter}MODELS.POST{tuple_delimiter}post_list calls Post.objects.all() to retrieve all posts{tuple_delimiter}8)
+{record_delimiter}
+("relationship"{tuple_delimiter}VIEWS.POST_DETAIL{tuple_delimiter}MODELS.POST{tuple_delimiter}post_detail calls get_object_or_404 with Post to fetch a single post by pk{tuple_delimiter}9)
+{record_delimiter}
+("relationship"{tuple_delimiter}VIEWS.POST_DETAIL{tuple_delimiter}MODELS.POST.GET_SUMMARY{tuple_delimiter}post_detail calls post.get_summary() to generate the summary for the template{tuple_delimiter}7)
+{record_delimiter}
+("relationship"{tuple_delimiter}VIEWS{tuple_delimiter}DJANGO.SHORTCUTS{tuple_delimiter}views.py imports render and get_object_or_404 from django.shortcuts{tuple_delimiter}7)
 {completion_delimiter}
 
 ######################
