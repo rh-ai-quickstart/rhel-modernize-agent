@@ -89,7 +89,7 @@ embed_text:
 extract_graph:
   prompt: "prompts/extract_graph.txt"
   entity_types: [module, class, function, package, dependency]
-  max_gleanings: 1
+  max_gleanings: 2
 
 summarize_descriptions:
   model_id: default_chat_model
