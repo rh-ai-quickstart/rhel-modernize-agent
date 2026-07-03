@@ -119,6 +119,12 @@ def tar_step(graphrag_source_path: str, target_path: str):
     )
 
 
+@dsl.component(base_image="python:3.9-slim")
+def export_index_artifact(workdir: str, index_artifact: dsl.Output[dsl.Artifact]):
+    import shutil
+    shutil.copy(f"{workdir}/graphrag-index.tar.gz", index_artifact.path)
+
+
 @dsl.pipeline(
     name="code-understanding-pipeline",
     description="Clone repo, generate GraphRAG metadata, build index, and tar output",
@@ -135,8 +141,8 @@ def code_understanding_pipeline(
     graphrag_source_path: str = "graph_rag_app/source",
     max_concurrency:      int = 2,
     n_completions:        int = 1,
-    chunk_size:           int = 2500,
-    chunk_overlap:        int = 300,
+    chunk_size:           int = 1200,
+    chunk_overlap:        int = 100,
 ):
     clone = git_clone_step(repo_url=repo_url, repo_ref=repo_ref)
     mount_pvc(clone, pvc_name=pvc_name, mount_path=MOUNT_PATH)
@@ -165,6 +171,9 @@ def code_understanding_pipeline(
 
     tar = tar_step(graphrag_source_path=graphrag_source_path, target_path=target_path).after(idx)
     mount_pvc(tar, pvc_name=pvc_name, mount_path=MOUNT_PATH)
+
+    export = export_index_artifact(workdir=WORKDIR).after(tar)
+    mount_pvc(export, pvc_name=pvc_name, mount_path=MOUNT_PATH)
 
 
 if __name__ == "__main__":

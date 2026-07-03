@@ -86,8 +86,8 @@ REPO_NAME           := $(basename $(notdir $(GITHUB_TARGET_REPO)))
 INDEX_TAR           ?= $(INDEXES_DIR)/graphrag-index-$(if $(REPO_NAME),$(REPO_NAME)-,)$(RUN_ID).tar.gz
 CHUNK_SIZE          ?=
 CHUNK_OVERLAP       ?=
-QUESTION            ?= Which modules would be riskiest to refactor first? Include the fully qualified names.
-COMMUNITY_LEVEL     ?= 2
+QUESTION            ?=
+COMMUNITY_LEVEL     ?=
 INDEX_BASENAME      := $(basename $(basename $(notdir $(INDEX_TAR))))
 REPORTS_DIR         := reports/$(if $(INDEX_BASENAME),$(INDEX_BASENAME),latest)
 MOUNT_PATH          := /opt/app-root/src
@@ -165,18 +165,19 @@ run-analysis: ## Run analysis pipeline: make run-analysis NAMESPACE=x INDEX_TAR=
 	oc run analysis-uploader-$(RUN_ID) -n $(NAMESPACE) --image=$(_GIT_CLONE_IMAGE) --restart=Never \
 		--overrides='{"spec":{"serviceAccountName":"pipeline-runner-dspa","volumes":[{"name":"pvc","persistentVolumeClaim":{"claimName":"$(PVC_NAME)"}}],"containers":[{"name":"ul","image":"$(_GIT_CLONE_IMAGE)","command":["sleep","infinity"],"volumeMounts":[{"mountPath":"$(MOUNT_PATH)","name":"pvc"}]}]}}'
 	oc wait --for=condition=Ready pod/analysis-uploader-$(RUN_ID) -n $(NAMESPACE) --timeout=300s
-	$(file >/tmp/pipeline_question_$(RUN_ID).txt,$(QUESTION))
+	$(if $(QUESTION),$(file >/tmp/pipeline_question_$(RUN_ID).txt,$(QUESTION)))
 	# Step 1: submit the pipeline and save the run ID for later.
 	OC_TOKEN=$$(oc whoami -t) \
 	uv run --with kfp python3 -c "\
 import os, urllib3; urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning); \
 from kfp.client import Client; \
 c = Client(host='$(PIPELINE_SERVER_URL)', existing_token=os.environ['OC_TOKEN'], verify_ssl=False); \
+args = {'pvc_name': '$(PVC_NAME)', 'repo_url': '$(AGENT_MESH_REPO_URL)', \
+        'repo_ref': '$(AGENT_MESH_REPO_REF)', 'index_tar': 'graphrag-index.tar.gz'}; \
+$(if $(QUESTION),args.update({'question': open('/tmp/pipeline_question_$(RUN_ID).txt').read()});) \
+$(if $(COMMUNITY_LEVEL),args.update({'community_level': $(COMMUNITY_LEVEL)});) \
 run = c.create_run_from_pipeline_package('helm/files/code_analysis_pipeline.yaml', \
-    arguments={'pvc_name': '$(PVC_NAME)', 'repo_url': '$(AGENT_MESH_REPO_URL)', \
-               'repo_ref': '$(AGENT_MESH_REPO_REF)', 'index_tar': 'graphrag-index.tar.gz', \
-               'question': open('/tmp/pipeline_question_$(RUN_ID).txt').read(), \
-               'community_level': $(COMMUNITY_LEVEL)}); \
+    arguments=args); \
 print(f'Run submitted: {run.run_id}'); \
 open('/tmp/kfp_run_id_$(RUN_ID).txt', 'w').write(run.run_id)"
 	# Step 2: poll until git_clone_step has created the working directory on the PVC.

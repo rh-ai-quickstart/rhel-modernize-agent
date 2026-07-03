@@ -2,8 +2,8 @@
 # Name: code-understanding-pipeline
 # Description: Clone repo, generate GraphRAG metadata, build index, and tar output
 # Inputs:
-#    chunk_overlap: int [Default: 300.0]
-#    chunk_size: int [Default: 2500.0]
+#    chunk_overlap: int [Default: 100.0]
+#    chunk_size: int [Default: 1200.0]
 #    git_branch: str [Default: 'main']
 #    git_repo: str [Default: '']
 #    graphrag_source_path: str [Default: 'graph_rag_app/source']
@@ -46,6 +46,18 @@ components:
           parameterType: STRING
         graphrag_source_path:
           parameterType: STRING
+  comp-export-index-artifact:
+    executorLabel: exec-export-index-artifact
+    inputDefinitions:
+      parameters:
+        workdir:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        index_artifact:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
   comp-git-clone-step:
     executorLabel: exec-git-clone-step
     inputDefinitions:
@@ -97,6 +109,36 @@ deploymentSpec:
         - sh
         - -c
         image: quay.io/midawson/agent-mesh-for-sw-modernization-data-indexing:0.0.1-dev
+    exec-export-index-artifact:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - export_index_artifact
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.1'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef export_index_artifact(workdir: str, index_artifact: dsl.Output[dsl.Artifact]):\n\
+          \    import shutil\n    shutil.copy(f\"{workdir}/graphrag-index.tar.gz\"\
+          , index_artifact.path)\n\n"
+        image: python:3.9-slim
     exec-git-clone-step:
       container:
         args:
@@ -171,6 +213,20 @@ root:
               componentInputParameter: graphrag_source_path
         taskInfo:
           name: data-indexing-step
+      export-index-artifact:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-export-index-artifact
+        dependentTasks:
+        - tar-step
+        inputs:
+          parameters:
+            workdir:
+              runtimeValue:
+                constant: /opt/app-root/src/workflows/code_understanding
+        taskInfo:
+          name: export-index-artifact
       git-clone-step:
         cachingOptions:
           enableCache: true
@@ -202,11 +258,11 @@ root:
   inputDefinitions:
     parameters:
       chunk_overlap:
-        defaultValue: 300.0
+        defaultValue: 100.0
         isOptional: true
         parameterType: NUMBER_INTEGER
       chunk_size:
-        defaultValue: 2500.0
+        defaultValue: 1200.0
         isOptional: true
         parameterType: NUMBER_INTEGER
       git_branch:
@@ -326,6 +382,12 @@ platforms:
             secretNameParameter:
               runtimeValue:
                 constant: code-understanding-env
+        exec-export-index-artifact:
+          pvcMount:
+          - componentInputParameter: pvc_name
+            mountPath: /opt/app-root/src
+            pvcNameParameter:
+              componentInputParameter: pvc_name
         exec-git-clone-step:
           pvcMount:
           - componentInputParameter: pvc_name
