@@ -65,22 +65,22 @@ def data_generation_step(
         args=[
             (
                 'import papermill as pm, sys; '
-                'langs = [x.strip() for x in sys.argv[7].split(",")]; '
+                'params = {"_GIT_REPO": sys.argv[1], "_GIT_BRANCH": sys.argv[2], '
+                '"_SOURCE_PATH": sys.argv[3], "_TARGET_PATH": sys.argv[4]}; '
+                'if sys.argv[5]: params["_LANGUAGES"] = [x.strip() for x in sys.argv[5].split(",")]; '
+                'mc = int(sys.argv[6]); nc = int(sys.argv[7]); '
+                'if mc: params["_MAX_CONCURRENCY"] = mc; '
+                'if nc: params["_N_COMPLETIONS"] = nc; '
                 f'pm.execute_notebook("{WORKDIR}/data_generation_graphrag_pipeline.ipynb", "/dev/null", '
-                f'cwd="{WORKDIR}", log_output=True, '
-                'parameters=dict('
-                '_GIT_REPO=sys.argv[1], _GIT_BRANCH=sys.argv[2], '
-                '_SOURCE_PATH=sys.argv[3], _TARGET_PATH=sys.argv[4], '
-                '_MAX_CONCURRENCY=int(sys.argv[5]), _N_COMPLETIONS=int(sys.argv[6]), '
-                '_LANGUAGES=langs))'
+                f'cwd="{WORKDIR}", log_output=True, progress_bar=False, parameters=params)'
             ),
             git_repo,         # sys.argv[1]
             git_branch,       # sys.argv[2]
             source_path,      # sys.argv[3]
             target_path,      # sys.argv[4]
-            max_concurrency,  # sys.argv[5]
-            n_completions,    # sys.argv[6]
-            languages,        # sys.argv[7]
+            languages,        # sys.argv[5]
+            max_concurrency,  # sys.argv[6]
+            n_completions,    # sys.argv[7]
         ],
     )
 
@@ -89,20 +89,22 @@ def data_generation_step(
 def data_indexing_step(codebase_path: str, graphrag_source_path: str, chunk_size: int, chunk_overlap: int):
     return dsl.ContainerSpec(
         image=DATA_INDEXING_IMAGE,
-        command=["sh", "-c"],
-        args=[(
-            f"export GRAPHRAG_CHUNK_SIZE={{chunk_size}} && "
-            f"export GRAPHRAG_CHUNK_OVERLAP={{chunk_overlap}} && "
-            f"papermill {WORKDIR}/data_indexing_graphrag_pipeline.ipynb /dev/null "
-            f"--cwd {WORKDIR} --log-output --no-progress-bar "
-            f"-p _CODEBASE_PATH {{codebase_path}} "
-            f"-p _GRAPHRAG_SOURCE_PATH {{graphrag_source_path}}"
-        ).format(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            codebase_path=codebase_path,
-            graphrag_source_path=graphrag_source_path,
-        )],
+        command=["python3", "-c"],
+        args=[
+            (
+                'import papermill as pm, sys; '
+                'params = {"_CODEBASE_PATH": sys.argv[1], "_GRAPHRAG_SOURCE_PATH": sys.argv[2]}; '
+                'cs = int(sys.argv[3]); co = int(sys.argv[4]); '
+                'if cs: params["_CHUNK_SIZE"] = cs; '
+                'if co: params["_CHUNK_OVERLAP"] = co; '
+                f'pm.execute_notebook("{WORKDIR}/data_indexing_graphrag_pipeline.ipynb", "/dev/null", '
+                f'cwd="{WORKDIR}", log_output=True, progress_bar=False, parameters=params)'
+            ),
+            codebase_path,        # sys.argv[1]
+            graphrag_source_path, # sys.argv[2]
+            chunk_size,           # sys.argv[3]
+            chunk_overlap,        # sys.argv[4]
+        ],
     )
 
 
@@ -135,14 +137,14 @@ def code_understanding_pipeline(
     repo_ref:             str = "main",
     git_repo:             str = "",
     git_branch:           str = "main",
-    languages:            str = "python",
+    languages:            str = "",
     source_path:          str = "source",
     target_path:          str = "target",
     graphrag_source_path: str = "graph_rag_app/source",
-    max_concurrency:      int = 2,
-    n_completions:        int = 1,
-    chunk_size:           int = 1200,
-    chunk_overlap:        int = 100,
+    max_concurrency:      int = 0,
+    n_completions:        int = 0,
+    chunk_size:           int = 0,
+    chunk_overlap:        int = 0,
 ):
     clone = git_clone_step(repo_url=repo_url, repo_ref=repo_ref)
     mount_pvc(clone, pvc_name=pvc_name, mount_path=MOUNT_PATH)

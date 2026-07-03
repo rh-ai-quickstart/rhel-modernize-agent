@@ -85,17 +85,23 @@ def prepare_config_step():
 def analysis_step(graphrag_source_path: str, question: str, output_dir: str, community_level: int):
     return dsl.ContainerSpec(
         image=DATA_INDEXING_IMAGE,
-        command=["papermill"],
+        command=["python3", "-c"],
         args=[
-            f"{WORKDIR}/data_analysis_graphrag_pipeline.ipynb",
-            "/dev/null",
-            "--cwd", WORKDIR,
-            "--log-output",
-            "--no-progress-bar",
-            "-p", "_GRAPHRAG_SOURCE_PATH", graphrag_source_path,
-            "-p", "_QUESTION",             question,
-            "-p", "_OUTPUT_DIR",           output_dir,
-            "-p", "_COMMUNITY_LEVEL",      community_level,
+            (
+                'import papermill as pm, sys; '
+                'params = {}; '
+                'if sys.argv[1]: params["_GRAPHRAG_SOURCE_PATH"] = sys.argv[1]; '
+                'if sys.argv[2]: params["_OUTPUT_DIR"] = sys.argv[2]; '
+                'if sys.argv[3]: params["_QUESTION"] = sys.argv[3]; '
+                'cl = int(sys.argv[4]); '
+                'if cl: params["_COMMUNITY_LEVEL"] = cl; '
+                f'pm.execute_notebook("{WORKDIR}/data_analysis_graphrag_pipeline.ipynb", "/dev/null", '
+                f'cwd="{WORKDIR}", log_output=True, progress_bar=False, parameters=params)'
+            ),
+            graphrag_source_path, # sys.argv[1]
+            output_dir,           # sys.argv[2]
+            question,             # sys.argv[3]
+            community_level,      # sys.argv[4]
         ],
     )
 
@@ -109,10 +115,10 @@ def code_analysis_pipeline(
     repo_url:             str = "",
     repo_ref:             str = "main",
     index_tar:            str = "graphrag-index.tar.gz",
-    graphrag_source_path: str = f"{WORKDIR}/graph_rag_app/source",
-    question:             str = "Which modules would be riskiest to refactor first? Include the fully qualified names.",
-    output_dir:           str = f"{WORKDIR}/reports",
-    community_level:      int = 2,
+    graphrag_source_path: str = "",
+    question:             str = "",
+    output_dir:           str = "",
+    community_level:      int = 0,
 ):
     clone = git_clone_step(repo_url=repo_url, repo_ref=repo_ref)
     mount_pvc(clone, pvc_name=pvc_name, mount_path=MOUNT_PATH)

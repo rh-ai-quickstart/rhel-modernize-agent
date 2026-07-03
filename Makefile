@@ -86,6 +86,9 @@ REPO_NAME           := $(basename $(notdir $(GITHUB_TARGET_REPO)))
 INDEX_TAR           ?= $(INDEXES_DIR)/graphrag-index-$(if $(REPO_NAME),$(REPO_NAME)-,)$(RUN_ID).tar.gz
 CHUNK_SIZE          ?=
 CHUNK_OVERLAP       ?=
+LANGUAGES           ?=
+MAX_CONCURRENCY     ?=
+N_COMPLETIONS       ?=
 QUESTION            ?=
 COMMUNITY_LEVEL     ?=
 INDEX_BASENAME      := $(basename $(basename $(notdir $(INDEX_TAR))))
@@ -136,6 +139,9 @@ args = {'pvc_name': '$(PVC_NAME)', 'repo_url': '$(AGENT_MESH_REPO_URL)', \
         'git_branch': '$(GITHUB_TARGET_BRANCH)'}; \
 $(if $(CHUNK_SIZE),args.update({'chunk_size': $(CHUNK_SIZE)});) \
 $(if $(CHUNK_OVERLAP),args.update({'chunk_overlap': $(CHUNK_OVERLAP)});) \
+$(if $(LANGUAGES),args.update({'languages': '$(LANGUAGES)'});) \
+$(if $(MAX_CONCURRENCY),args.update({'max_concurrency': $(MAX_CONCURRENCY)});) \
+$(if $(N_COMPLETIONS),args.update({'n_completions': $(N_COMPLETIONS)});) \
 run = c.create_run_from_pipeline_package('helm/files/code_understanding_pipeline.yaml', \
     arguments=args); \
 print(f'Run submitted: {run.run_id}'); \

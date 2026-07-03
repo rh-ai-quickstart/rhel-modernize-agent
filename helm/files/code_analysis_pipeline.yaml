@@ -2,12 +2,12 @@
 # Name: code-analysis-pipeline
 # Description: Clone repo, extract GraphRAG index, run analysis notebook, write reports
 # Inputs:
-#    community_level: int [Default: 2.0]
-#    graphrag_source_path: str [Default: '/opt/app-root/src/workflows/code_understanding/graph_rag_app/source']
+#    community_level: int [Default: 0.0]
+#    graphrag_source_path: str [Default: '']
 #    index_tar: str [Default: 'graphrag-index.tar.gz']
-#    output_dir: str [Default: '/opt/app-root/src/workflows/code_understanding/reports']
+#    output_dir: str [Default: '']
 #    pvc_name: str [Default: '']
-#    question: str [Default: 'Which modules would be riskiest to refactor first? Include the fully qualified names.']
+#    question: str [Default: '']
 #    repo_ref: str [Default: 'main']
 #    repo_url: str [Default: '']
 components:
@@ -44,26 +44,19 @@ deploymentSpec:
     exec-analysis-step:
       container:
         args:
-        - /opt/app-root/src/workflows/code_understanding/data_analysis_graphrag_pipeline.ipynb
-        - /dev/null
-        - --cwd
-        - /opt/app-root/src/workflows/code_understanding
-        - --log-output
-        - --no-progress-bar
-        - -p
-        - _GRAPHRAG_SOURCE_PATH
+        - 'import papermill as pm, sys; params = {}; if sys.argv[1]: params["_GRAPHRAG_SOURCE_PATH"]
+          = sys.argv[1]; if sys.argv[2]: params["_OUTPUT_DIR"] = sys.argv[2]; if sys.argv[3]:
+          params["_QUESTION"] = sys.argv[3]; cl = int(sys.argv[4]); if cl: params["_COMMUNITY_LEVEL"]
+          = cl; pm.execute_notebook("/opt/app-root/src/workflows/code_understanding/data_analysis_graphrag_pipeline.ipynb",
+          "/dev/null", cwd="/opt/app-root/src/workflows/code_understanding", log_output=True,
+          progress_bar=False, parameters=params)'
         - '{{$.inputs.parameters[''graphrag_source_path'']}}'
-        - -p
-        - _QUESTION
-        - '{{$.inputs.parameters[''question'']}}'
-        - -p
-        - _OUTPUT_DIR
         - '{{$.inputs.parameters[''output_dir'']}}'
-        - -p
-        - _COMMUNITY_LEVEL
+        - '{{$.inputs.parameters[''question'']}}'
         - '{{$.inputs.parameters[''community_level'']}}'
         command:
-        - papermill
+        - python3
+        - -c
         image: quay.io/midawson/agent-mesh-for-sw-modernization-data-indexing:0.0.1-dev
     exec-extract-step:
       container:
@@ -163,11 +156,11 @@ root:
   inputDefinitions:
     parameters:
       community_level:
-        defaultValue: 2.0
+        defaultValue: 0.0
         isOptional: true
         parameterType: NUMBER_INTEGER
       graphrag_source_path:
-        defaultValue: /opt/app-root/src/workflows/code_understanding/graph_rag_app/source
+        defaultValue: ''
         isOptional: true
         parameterType: STRING
       index_tar:
@@ -175,7 +168,7 @@ root:
         isOptional: true
         parameterType: STRING
       output_dir:
-        defaultValue: /opt/app-root/src/workflows/code_understanding/reports
+        defaultValue: ''
         isOptional: true
         parameterType: STRING
       pvc_name:
@@ -183,8 +176,7 @@ root:
         isOptional: true
         parameterType: STRING
       question:
-        defaultValue: Which modules would be riskiest to refactor first? Include the
-          fully qualified names.
+        defaultValue: ''
         isOptional: true
         parameterType: STRING
       repo_ref:

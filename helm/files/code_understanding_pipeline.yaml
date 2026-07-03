@@ -2,14 +2,14 @@
 # Name: code-understanding-pipeline
 # Description: Clone repo, generate GraphRAG metadata, build index, and tar output
 # Inputs:
-#    chunk_overlap: int [Default: 100.0]
-#    chunk_size: int [Default: 1200.0]
+#    chunk_overlap: int [Default: 0.0]
+#    chunk_size: int [Default: 0.0]
 #    git_branch: str [Default: 'main']
 #    git_repo: str [Default: '']
 #    graphrag_source_path: str [Default: 'graph_rag_app/source']
-#    languages: str [Default: 'python']
-#    max_concurrency: int [Default: 2.0]
-#    n_completions: int [Default: 1.0]
+#    languages: str [Default: '']
+#    max_concurrency: int [Default: 0.0]
+#    n_completions: int [Default: 0.0]
 #    pvc_name: str [Default: '']
 #    repo_ref: str [Default: 'main']
 #    repo_url: str [Default: '']
@@ -79,19 +79,20 @@ deploymentSpec:
     exec-data-generation-step:
       container:
         args:
-        - import papermill as pm, sys; langs = [x.strip() for x in sys.argv[7].split(",")];
-          pm.execute_notebook("/opt/app-root/src/workflows/code_understanding/data_generation_graphrag_pipeline.ipynb",
+        - 'import papermill as pm, sys; params = {"_GIT_REPO": sys.argv[1], "_GIT_BRANCH":
+          sys.argv[2], "_SOURCE_PATH": sys.argv[3], "_TARGET_PATH": sys.argv[4]};
+          if sys.argv[5]: params["_LANGUAGES"] = [x.strip() for x in sys.argv[5].split(",")];
+          mc = int(sys.argv[6]); nc = int(sys.argv[7]); if mc: params["_MAX_CONCURRENCY"]
+          = mc; if nc: params["_N_COMPLETIONS"] = nc; pm.execute_notebook("/opt/app-root/src/workflows/code_understanding/data_generation_graphrag_pipeline.ipynb",
           "/dev/null", cwd="/opt/app-root/src/workflows/code_understanding", log_output=True,
-          parameters=dict(_GIT_REPO=sys.argv[1], _GIT_BRANCH=sys.argv[2], _SOURCE_PATH=sys.argv[3],
-          _TARGET_PATH=sys.argv[4], _MAX_CONCURRENCY=int(sys.argv[5]), _N_COMPLETIONS=int(sys.argv[6]),
-          _LANGUAGES=langs))
+          progress_bar=False, parameters=params)'
         - '{{$.inputs.parameters[''git_repo'']}}'
         - '{{$.inputs.parameters[''git_branch'']}}'
         - '{{$.inputs.parameters[''source_path'']}}'
         - '{{$.inputs.parameters[''target_path'']}}'
+        - '{{$.inputs.parameters[''languages'']}}'
         - '{{$.inputs.parameters[''max_concurrency'']}}'
         - '{{$.inputs.parameters[''n_completions'']}}'
-        - '{{$.inputs.parameters[''languages'']}}'
         command:
         - python3
         - -c
@@ -99,14 +100,17 @@ deploymentSpec:
     exec-data-indexing-step:
       container:
         args:
-        - export GRAPHRAG_CHUNK_SIZE={{$.inputs.parameters['chunk_size']}} && export
-          GRAPHRAG_CHUNK_OVERLAP={{$.inputs.parameters['chunk_overlap']}} && papermill
-          /opt/app-root/src/workflows/code_understanding/data_indexing_graphrag_pipeline.ipynb
-          /dev/null --cwd /opt/app-root/src/workflows/code_understanding --log-output
-          --no-progress-bar -p _CODEBASE_PATH {{$.inputs.parameters['codebase_path']}}
-          -p _GRAPHRAG_SOURCE_PATH {{$.inputs.parameters['graphrag_source_path']}}
+        - 'import papermill as pm, sys; params = {"_CODEBASE_PATH": sys.argv[1], "_GRAPHRAG_SOURCE_PATH":
+          sys.argv[2]}; cs = int(sys.argv[3]); co = int(sys.argv[4]); if cs: params["_CHUNK_SIZE"]
+          = cs; if co: params["_CHUNK_OVERLAP"] = co; pm.execute_notebook("/opt/app-root/src/workflows/code_understanding/data_indexing_graphrag_pipeline.ipynb",
+          "/dev/null", cwd="/opt/app-root/src/workflows/code_understanding", log_output=True,
+          progress_bar=False, parameters=params)'
+        - '{{$.inputs.parameters[''codebase_path'']}}'
+        - '{{$.inputs.parameters[''graphrag_source_path'']}}'
+        - '{{$.inputs.parameters[''chunk_size'']}}'
+        - '{{$.inputs.parameters[''chunk_overlap'']}}'
         command:
-        - sh
+        - python3
         - -c
         image: quay.io/midawson/agent-mesh-for-sw-modernization-data-indexing:0.0.1-dev
     exec-export-index-artifact:
@@ -258,11 +262,11 @@ root:
   inputDefinitions:
     parameters:
       chunk_overlap:
-        defaultValue: 100.0
+        defaultValue: 0.0
         isOptional: true
         parameterType: NUMBER_INTEGER
       chunk_size:
-        defaultValue: 1200.0
+        defaultValue: 0.0
         isOptional: true
         parameterType: NUMBER_INTEGER
       git_branch:
@@ -278,15 +282,15 @@ root:
         isOptional: true
         parameterType: STRING
       languages:
-        defaultValue: python
+        defaultValue: ''
         isOptional: true
         parameterType: STRING
       max_concurrency:
-        defaultValue: 2.0
+        defaultValue: 0.0
         isOptional: true
         parameterType: NUMBER_INTEGER
       n_completions:
-        defaultValue: 1.0
+        defaultValue: 0.0
         isOptional: true
         parameterType: NUMBER_INTEGER
       pvc_name:
