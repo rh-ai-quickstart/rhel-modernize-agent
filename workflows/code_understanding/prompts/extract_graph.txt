@@ -10,7 +10,8 @@ Given a text document describing a software codebase (source files, classes, fun
 - entity_description: Comprehensive description of the entity's role, responsibilities, and key behaviors
 Format each entity as ("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>)
 
-2. From the entities identified in step 1, identify all pairs of (source_entity, target_entity) that are *clearly related* to each other.
+2. From the entities identified in step 1, identify ALL pairs of (source_entity, target_entity) that are related to each other.
+Be exhaustive: capture every import, every function or method call, every class instantiation, every inheritance, every definition (method defined in class, function defined in module), and every other dependency visible in the text. Include a relationship even when the connection appears obvious. Common relationship types to look for: imports, calls, instantiates, inherits, defines, overrides, configures, uses.
 For each pair of related entities, extract the following information:
 - source_entity: name of the source entity, as identified in step 1
 - target_entity: name of the target entity, as identified in step 1
@@ -66,9 +67,15 @@ Output:
 {record_delimiter}
 ("relationship"{tuple_delimiter}LOGINVIEW.POST{tuple_delimiter}LOGINVIEW{tuple_delimiter}post is a method of LoginView{tuple_delimiter}10)
 {record_delimiter}
-("relationship"{tuple_delimiter}LOGINVIEW.POST{tuple_delimiter}LOGINFORM{tuple_delimiter}post instantiates and validates LoginForm to process submitted credentials{tuple_delimiter}8)
+("relationship"{tuple_delimiter}LOGINVIEW.GET{tuple_delimiter}LOGINFORM{tuple_delimiter}get instantiates an empty LoginForm to render in the response{tuple_delimiter}8)
+{record_delimiter}
+("relationship"{tuple_delimiter}LOGINVIEW.POST{tuple_delimiter}LOGINFORM{tuple_delimiter}post instantiates and validates LoginForm to process submitted credentials{tuple_delimiter}9)
+{record_delimiter}
+("relationship"{tuple_delimiter}LOGINVIEW.POST{tuple_delimiter}DJANGO.CONTRIB.AUTH{tuple_delimiter}post calls authenticate() and login() from django.contrib.auth{tuple_delimiter}8)
 {record_delimiter}
 ("relationship"{tuple_delimiter}VIEWS{tuple_delimiter}DJANGO.CONTRIB.AUTH{tuple_delimiter}views.py imports authenticate and login from django.contrib.auth{tuple_delimiter}7)
+{record_delimiter}
+("relationship"{tuple_delimiter}VIEWS{tuple_delimiter}DJANGO.HTTP{tuple_delimiter}views.py imports HttpResponse from django.http{tuple_delimiter}6)
 {completion_delimiter}
 
 ######################
