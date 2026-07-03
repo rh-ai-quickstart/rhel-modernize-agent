@@ -89,12 +89,8 @@ def analysis_step(graphrag_source_path: str, question: str, output_dir: str, com
         args=[
             (
                 'import papermill as pm, sys; '
-                'params = {}; '
-                'if sys.argv[1]: params["_GRAPHRAG_SOURCE_PATH"] = sys.argv[1]; '
-                'if sys.argv[2]: params["_OUTPUT_DIR"] = sys.argv[2]; '
-                'if sys.argv[3]: params["_QUESTION"] = sys.argv[3]; '
                 'cl = int(sys.argv[4]); '
-                'if cl: params["_COMMUNITY_LEVEL"] = cl; '
+                'params = {k: v for k, v in [("_GRAPHRAG_SOURCE_PATH", sys.argv[1]), ("_OUTPUT_DIR", sys.argv[2]), ("_QUESTION", sys.argv[3]), ("_COMMUNITY_LEVEL", cl)] if v}; '
                 f'pm.execute_notebook("{WORKDIR}/data_analysis_graphrag_pipeline.ipynb", "/dev/null", '
                 f'cwd="{WORKDIR}", log_output=True, progress_bar=False, parameters=params)'
             ),

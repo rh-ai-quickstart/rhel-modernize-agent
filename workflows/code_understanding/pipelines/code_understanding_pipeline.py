@@ -65,12 +65,11 @@ def data_generation_step(
         args=[
             (
                 'import papermill as pm, sys; '
+                'mc, nc = int(sys.argv[6]), int(sys.argv[7]); '
+                'langs = [x.strip() for x in sys.argv[5].split(",")] if sys.argv[5] else None; '
                 'params = {"_GIT_REPO": sys.argv[1], "_GIT_BRANCH": sys.argv[2], '
                 '"_SOURCE_PATH": sys.argv[3], "_TARGET_PATH": sys.argv[4]}; '
-                'if sys.argv[5]: params["_LANGUAGES"] = [x.strip() for x in sys.argv[5].split(",")]; '
-                'mc = int(sys.argv[6]); nc = int(sys.argv[7]); '
-                'if mc: params["_MAX_CONCURRENCY"] = mc; '
-                'if nc: params["_N_COMPLETIONS"] = nc; '
+                'params.update({k: v for k, v in [("_LANGUAGES", langs), ("_MAX_CONCURRENCY", mc), ("_N_COMPLETIONS", nc)] if v}); '
                 f'pm.execute_notebook("{WORKDIR}/data_generation_graphrag_pipeline.ipynb", "/dev/null", '
                 f'cwd="{WORKDIR}", log_output=True, progress_bar=False, parameters=params)'
             ),
@@ -93,10 +92,9 @@ def data_indexing_step(codebase_path: str, graphrag_source_path: str, chunk_size
         args=[
             (
                 'import papermill as pm, sys; '
+                'cs, co = int(sys.argv[3]), int(sys.argv[4]); '
                 'params = {"_CODEBASE_PATH": sys.argv[1], "_GRAPHRAG_SOURCE_PATH": sys.argv[2]}; '
-                'cs = int(sys.argv[3]); co = int(sys.argv[4]); '
-                'if cs: params["_CHUNK_SIZE"] = cs; '
-                'if co: params["_CHUNK_OVERLAP"] = co; '
+                'params.update({k: v for k, v in [("_CHUNK_SIZE", cs), ("_CHUNK_OVERLAP", co)] if v}); '
                 f'pm.execute_notebook("{WORKDIR}/data_indexing_graphrag_pipeline.ipynb", "/dev/null", '
                 f'cwd="{WORKDIR}", log_output=True, progress_bar=False, parameters=params)'
             ),
