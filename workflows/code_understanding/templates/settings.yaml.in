@@ -13,13 +13,15 @@ models:
     model: ${GRAPHRAG_LLM_ID}
     model_provider: ${GRAPHRAG_LLM_PROVIDER_GRAPHRAG}
     model_supports_json: true
-    concurrent_requests: 25
+    concurrent_requests: 4
     async_mode: threaded #asyncio
     retry_strategy: native
     max_retries: 10
-    tokens_per_minute: null           
-    requests_per_minute: null   
-    # encoding_name: o200k_harmony 
+    tokens_per_minute: null
+    requests_per_minute: null
+    # encoding_name: o200k_harmony
+    call_args:
+      reasoning_effort: high
   default_embedding_model:
     type: embedding # or azure_openai_embedding
     api_base: ${EMBED_LLM_API_BASE}
@@ -33,7 +35,7 @@ models:
     # deployment_name: <azure_model_deployment_name>
     encoding_model: cl100k_base # automatically set by tiktoken if left undefined
     model_supports_json: true # recommended if this is available for your model.
-    concurrent_requests: 25 # max number of simultaneous LLM requests allowed
+    concurrent_requests: 4 # max number of simultaneous LLM requests allowed
     async_mode: threaded # or asyncio
     retry_strategy: native
     max_retries: 10
@@ -87,7 +89,7 @@ embed_text:
 extract_graph:
   prompt: "prompts/extract_graph.txt"
   entity_types: [module, class, function, package, dependency]
-  max_gleanings: 1
+  max_gleanings: 2
 
 summarize_descriptions:
   model_id: default_chat_model
